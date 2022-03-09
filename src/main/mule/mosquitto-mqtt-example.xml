@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:mqtt3="http://www.mulesoft.org/schema/mule/mqtt3"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/mqtt3 http://www.mulesoft.org/schema/mule/mqtt3/current/mule-mqtt3.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<mqtt3:config name="Mosquitto_MQTT3_Config" doc:name="MQTT3 Config" doc:id="c56e97a8-dcf7-49fa-8759-44b1a17600db" >
+		<mqtt3:form-connection host="localhost" >
+			<mqtt3:client-id-generator >
+				<mqtt3:client-id-random-suffix-generator clientId="mule-mosquitto-client22" />
+			</mqtt3:client-id-generator>
+			<mqtt3:connection-options keepAliveInterval="30" />
+		</mqtt3:form-connection>
+	</mqtt3:config>
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="5f245b40-e375-4743-b8d5-320932a300c9" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<flow name="publish-message-queue" doc:id="b9fd2e96-6188-43a1-ad8b-28a51e4fa2ec" >
+		<http:listener doc:name="Listener" doc:id="968ddc8b-6183-4653-a091-fa6ae81d988b" config-ref="HTTP_Listener_config" path="/pushmosquitto" allowedMethods="POST"/>
+		<mqtt3:publish doc:name="Publish" doc:id="9333c920-6702-448f-ac05-9bf5deab5bdf" config-ref="Mosquitto_MQTT3_Config" topic="queue.mule"/>
+		<ee:transform doc:name="Message delivered JSON" doc:id="b57da144-7bb3-4761-aed5-202eb4edfa71" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"result" : "message delivered"
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="receive-msg-queue" doc:id="6edba461-b4ca-41ba-8d9e-b082239b6dcd" >
+		<mqtt3:listener doc:name="On New Message" doc:id="7d1757b7-3189-4351-8c39-9fed99e3d22d" config-ref="Mosquitto_MQTT3_Config">
+			<mqtt3:topics >
+				<mqtt3:topic topicFilter="queue.mule" />
+			</mqtt3:topics>
+		</mqtt3:listener>
+		<logger level="INFO" doc:name="Logger" doc:id="236b99d5-ce4a-4458-8637-ef064e0e85b1" message="#[payload]"/>
+	</flow>
+</mule>
